@@ -24,6 +24,8 @@ const { blockchainService } = require('./blockchainService');
 const mobileVerify = require('./mobileVerify');
 const msg91Client = require('./msg91Client');
 const authTokens = require('./authTokens');
+const adminAuth = require('./adminAuth');
+const subscriptionPlans = require('./subscriptionPlans');
 
 const loadDotEnv = () => {
   const envPath = path.join(process.cwd(), '.env');
@@ -171,7 +173,7 @@ const sendJson = (response, statusCode, payload) => {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-    'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
+    'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,OPTIONS',
   });
   response.end(JSON.stringify(payload));
 };
@@ -1482,6 +1484,10 @@ const handlers = {
 
   // Mobile OTP login: verifies the widget OTP with MSG91 server-side. See mobileVerify.js.
   ...mobileVerify.handlers,
+  // Admin login (env-configured account, JWT with role=admin). See adminAuth.js.
+  ...adminAuth.handlers,
+  // Subscription plans: public GET, admin-only create/update/delete. See subscriptionPlans.js.
+  ...subscriptionPlans.handlers,
 
   // Friendly GET info handlers for browser testing
   'GET /api/meon/digi-url': async () => ({
@@ -1562,6 +1568,47 @@ const handlers = {
   'GET /api/land/blockchain-status': async () => {
     return blockchainService.getBlockchainStatus();
   },
+};
+
+/**
+ * Resolves "METHOD /path" to a handler. Exact keys win; otherwise keys containing
+ * ":param" segments (e.g. 'PUT /api/subscriptions/plans/:id') are matched and the
+ * captured values are returned as params.
+ */
+const parameterizedRoutes = Object.keys(handlers)
+  .filter((routeKey) => routeKey.includes('/:'))
+  .map((routeKey) => {
+    const [method, ...rest] = routeKey.split(' ');
+    const segments = rest.join(' ').split('/');
+    return { routeKey, method, segments, handler: handlers[routeKey] };
+  });
+
+const matchRoute = (key) => {
+  if (handlers[key]) {
+    return { handler: handlers[key], params: {} };
+  }
+  const [method, ...rest] = key.split(' ');
+  const parts = rest.join(' ').split('/');
+  for (const route of parameterizedRoutes) {
+    if (route.method !== method || route.segments.length !== parts.length) {
+      continue;
+    }
+    const params = {};
+    let ok = true;
+    for (let i = 0; i < route.segments.length; i += 1) {
+      const segment = route.segments[i];
+      if (segment.startsWith(':')) {
+        params[segment.slice(1)] = decodeURIComponent(parts[i]);
+      } else if (segment !== parts[i]) {
+        ok = false;
+        break;
+      }
+    }
+    if (ok) {
+      return { handler: route.handler, params };
+    }
+  }
+  return null;
 };
 
 const server = http.createServer(async (request, response) => {
@@ -2055,7 +2102,8 @@ const server = http.createServer(async (request, response) => {
     return;
   }
 
-  const handler = handlers[key];
+  const route = matchRoute(key);
+  const handler = route?.handler;
 
   if (!handler) {
     sendJson(response, 404, { message: 'Route not found' });
@@ -2064,7 +2112,7 @@ const server = http.createServer(async (request, response) => {
 
   try {
     const body = request.method === 'GET' ? {} : await readJson(request);
-    const context = { headers: request.headers, method: request.method, pathname };
+    const context = { headers: request.headers, method: request.method, pathname, params: route.params };
     const data = await handler(body, context);
     sendJson(response, 200, data);
   } catch (error) {
@@ -2095,5 +2143,6 @@ server.listen(PORT, HOST, () => {
     MSG91_TOKEN_AUTH_EXISTS: process.env.MSG91_TOKEN_AUTH ? 'YES' : 'NO',
     MSG91_READY: msg91Client.isConfigured() ? 'YES' : 'NO',
     JWT_SECRET_READY: authTokens.isConfigured() ? 'YES' : 'NO (set JWT_SECRET, 32+ chars)',
+    ADMIN_LOGIN_READY: adminAuth.isConfigured() ? 'YES' : `NO (${adminAuth.configProblem()})`,
   });
 });

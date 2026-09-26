@@ -37,7 +37,8 @@ const ensureConfigured = () => {
 
 /**
  * Issues the application's login token for a user.
- * `user` must have a stable `id`; `mobile` (E.164) and `loginMethod` are stored as claims.
+ * `user` must have a stable `id`; `mobile`, `email`, `role` (default "user") and
+ * `loginMethod` are stored as claims.
  */
 const generateToken = (user) => {
   ensureConfigured();
@@ -47,6 +48,8 @@ const generateToken = (user) => {
   }
   const claims = {
     mobile: user.mobile || undefined,
+    email: user.email || undefined,
+    role: user.role || 'user',
     loginMethod: user.loginMethod || undefined,
   };
   return jwt.sign(claims, secret, {
@@ -87,11 +90,21 @@ const requireAuth = (context) => {
   return verifyToken(token);
 };
 
+/** Like requireAuth, but the token must also carry the given role (e.g. "admin"). */
+const requireRole = (context, role) => {
+  const claims = requireAuth(context);
+  if (claims.role !== role) {
+    throw authError(403, 'Admin access required');
+  }
+  return claims;
+};
+
 module.exports = {
   isConfigured,
   generateToken,
   verifyToken,
   requireAuth,
+  requireRole,
   readBearerToken,
   __testing: { getConfig, MIN_SECRET_LENGTH },
 };

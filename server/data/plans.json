@@ -1,0 +1,26 @@
+{
+  "plans": [
+    {
+      "id": "monthly",
+      "name": "Monthly",
+      "amount": 1,
+      "interval": "monthly",
+      "currency": "INR",
+      "active": true,
+      "createdAt": "2026-09-26T17:31:05.467Z",
+      "updatedAt": "2026-09-26T17:34:59.207Z",
+      "updatedBy": "admin"
+    },
+    {
+      "id": "quarterly",
+      "name": "Quarterly",
+      "amount": 1,
+      "interval": "quarterly",
+      "currency": "INR",
+      "active": true,
+      "createdAt": "2026-09-26T17:31:05.467Z",
+      "updatedAt": "2026-09-26T17:36:00.012Z",
+      "updatedBy": "admin"
+    }
+  ]
+}

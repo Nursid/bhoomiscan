@@ -189,6 +189,8 @@ const me = async (body, context) => {
     user: {
       id: claims.sub,
       mobile: claims.mobile || null,
+      email: claims.email || null,
+      role: claims.role || 'user',
       loginMethod: claims.loginMethod || null,
     },
     expiresAt: claims.exp ? new Date(claims.exp * 1000).toISOString() : null,

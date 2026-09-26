@@ -1,0 +1,100 @@
+{
+  "project_info": {
+    "project_number": "280216762322",
+    "project_id": "third-party-c300d",
+    "storage_bucket": "third-party-c300d.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:280216762322:android:cfd2227f892a978c39fa0b",
+        "android_client_info": {
+          "package_name": "com.destinyprotocol"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "280216762322-jg7s3b3mmh5fa6tpbffc3jiuksaoli2l.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.destinyprotocol",
+            "certificate_hash": "eecf3ab413bb9471d25607cdce318850a084c5a5"
+          }
+        },
+        {
+          "client_id": "280216762322-qksslthjmns105o67kdgqtsrejt6q6t0.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.destinyprotocol",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "280216762322-ij2vs7vrtc5vcpu1c0222gp96gouia2i.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDloIigHTK9KTX5KVL0fjmjVKh3zu5o7eg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "280216762322-ij2vs7vrtc5vcpu1c0222gp96gouia2i.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:280216762322:android:9a9664bed767a19e39fa0b",
+        "android_client_info": {
+          "package_name": "com.trustledge"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "280216762322-kgsji80f8neqnb4qr3v5r8d222hqll6b.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.trustledge",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "280216762322-p33rda1jkpkm9g3lhgmrv0eaj07u55pb.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.trustledge",
+            "certificate_hash": "eecf3ab413bb9471d25607cdce318850a084c5a5"
+          }
+        },
+        {
+          "client_id": "280216762322-ij2vs7vrtc5vcpu1c0222gp96gouia2i.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDloIigHTK9KTX5KVL0fjmjVKh3zu5o7eg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "280216762322-ij2vs7vrtc5vcpu1c0222gp96gouia2i.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

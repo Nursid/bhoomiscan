@@ -21,6 +21,9 @@ const { getBiharOptions, verifyBiharLandRecord } = require('./biharClient');
 const { verifyMeonLandRecord, hasMeonLandState } = require('./meonLandClient');
 const { hashLandRecord, generateDataHash, verifyDataHash } = require('./landHasher');
 const { blockchainService } = require('./blockchainService');
+const mobileVerify = require('./mobileVerify');
+const msg91Client = require('./msg91Client');
+const authTokens = require('./authTokens');
 
 const loadDotEnv = () => {
   const envPath = path.join(process.cwd(), '.env');
@@ -167,7 +170,7 @@ const sendJson = (response, statusCode, payload) => {
   response.writeHead(statusCode, {
     'Content-Type': 'application/json',
     'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
     'Access-Control-Allow-Methods': 'GET,POST,OPTIONS',
   });
   response.end(JSON.stringify(payload));
@@ -1477,6 +1480,9 @@ const handlers = {
   'POST /get_access_token': async (body) => handlers['POST /api/meon/token'](body),
   'POST /api/get_access_token': async (body) => handlers['POST /api/meon/token'](body),
 
+  // Mobile OTP login: verifies the widget OTP with MSG91 server-side. See mobileVerify.js.
+  ...mobileVerify.handlers,
+
   // Friendly GET info handlers for browser testing
   'GET /api/meon/digi-url': async () => ({
     ok: true,
@@ -2058,11 +2064,13 @@ const server = http.createServer(async (request, response) => {
 
   try {
     const body = request.method === 'GET' ? {} : await readJson(request);
-    const data = await handler(body);
+    const context = { headers: request.headers, method: request.method, pathname };
+    const data = await handler(body, context);
     sendJson(response, 200, data);
   } catch (error) {
     console.warn(`[KYC] ${key} failed:`, error.message);
     const payload = {
+      ...(error.success === false ? { success: false } : {}),
       message: error.message || 'Internal server error',
     };
     if (error.exposeDetails !== false && error.details) {
@@ -2081,5 +2089,11 @@ server.listen(PORT, HOST, () => {
     SMTP_USER: SMTP_USER || 'NOT SET',
     SMTP_FROM: SMTP_FROM || 'NOT SET',
     SMTP_PASS_EXISTS: SMTP_PASS ? 'YES (Length: ' + SMTP_PASS.length + ')' : 'NO'
+  });
+  console.log('[Mobile OTP Login Config Check]:', {
+    MSG91_WIDGET_ID_EXISTS: process.env.MSG91_WIDGET_ID ? 'YES' : 'NO',
+    MSG91_TOKEN_AUTH_EXISTS: process.env.MSG91_TOKEN_AUTH ? 'YES' : 'NO',
+    MSG91_READY: msg91Client.isConfigured() ? 'YES' : 'NO',
+    JWT_SECRET_READY: authTokens.isConfigured() ? 'YES' : 'NO (set JWT_SECRET, 32+ chars)',
   });
 });

@@ -80,6 +80,7 @@ const publicPlan = (plan) => ({
   currency: plan.currency || 'INR',
   interval: plan.interval,
   ...(plan.description ? { description: plan.description } : {}),
+  ...(plan.razorpayPlanId ? { razorpayPlanId: plan.razorpayPlanId } : {}),
   active: plan.active !== false,
   createdAt: plan.createdAt,
   updatedAt: plan.updatedAt,
@@ -133,6 +134,15 @@ const validatePlanInput = (input, { partial = false } = {}) => {
       errors.push('description must be a string');
     } else {
       out.description = input.description ? String(input.description).trim().slice(0, 500) : '';
+    }
+  }
+
+  if (input.razorpayPlanId !== undefined) {
+    const razorpayPlanId = input.razorpayPlanId === null ? '' : String(input.razorpayPlanId).trim();
+    if (razorpayPlanId && !/^plan_[A-Za-z0-9]{6,}$/.test(razorpayPlanId)) {
+      errors.push('razorpayPlanId must look like plan_XXXXXXXX');
+    } else {
+      out.razorpayPlanId = razorpayPlanId;
     }
   }
 
@@ -259,9 +269,26 @@ const handlers = {
   'DELETE /api/subscriptions/plans/:id': deletePlan,
 };
 
+/** Read helpers for other modules (subscriptions). */
+const findPlanById = (id) => loadPlans().find((plan) => plan.id === normalizeId(id)) || null;
+
+const setRazorpayPlanId = (id, razorpayPlanId) => {
+  const plansList = loadPlans();
+  const index = plansList.findIndex((plan) => plan.id === normalizeId(id));
+  if (index === -1) {
+    throw apiError(404, 'Plan not found');
+  }
+  const next = [...plansList];
+  next[index] = { ...next[index], razorpayPlanId, updatedAt: now() };
+  savePlans(next);
+  return next[index];
+};
+
 module.exports = {
   handlers,
   DEFAULT_PLANS,
   INTERVALS,
+  findPlanById,
+  setRazorpayPlanId,
   __testing: { loadPlans, savePlans, resetCache, validatePlanInput, getPlansFile },
 };

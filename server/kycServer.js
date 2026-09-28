@@ -26,6 +26,8 @@ const msg91Client = require('./msg91Client');
 const authTokens = require('./authTokens');
 const adminAuth = require('./adminAuth');
 const subscriptionPlans = require('./subscriptionPlans');
+const subscriptions = require('./subscriptions');
+const razorpayClient = require('./razorpayClient');
 
 const loadDotEnv = () => {
   const envPath = path.join(process.cwd(), '.env');
@@ -86,8 +88,9 @@ const BSC_EXPLORER_TX_URL =
 const BSC_LAND_REGISTRY_ADDRESS = process.env.BSC_LAND_REGISTRY_ADDRESS || '';
 const BSC_RELAYER_PRIVATE_KEY = process.env.BSC_RELAYER_PRIVATE_KEY || process.env.PRIVATE_KEY || '';
 
-const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || 'rzp_live_TKNykl53nIgEDQ';
-const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || 'gY0aQJc8172905hsk192';
+// Razorpay credentials come from the environment only (see .env.example).
+const RAZORPAY_KEY_ID = process.env.RAZORPAY_KEY_ID || '';
+const RAZORPAY_KEY_SECRET = process.env.RAZORPAY_KEY_SECRET || '';
 
 const verifiedPaymentsStore = new Map();
 
@@ -144,7 +147,7 @@ const LAND_REGISTRY_ABI = [
   'event LandRecordStored(uint256 indexed recordId, address indexed owner, string ownerName, string state, string district, string tehsil, string village, string registrationNumber, uint256 timestamp)',
 ];
 
-const readJson = (request) =>
+const readRawBody = (request) =>
   new Promise((resolve, reject) => {
     let body = '';
 
@@ -152,21 +155,22 @@ const readJson = (request) =>
       body += chunk;
     });
 
-    request.on('end', () => {
-      if (!body) {
-        resolve({});
-        return;
-      }
-
-      try {
-        resolve(JSON.parse(body));
-      } catch {
-        reject(Object.assign(new Error('Invalid JSON body'), { statusCode: 400 }));
-      }
-    });
-
+    request.on('end', () => resolve(body));
     request.on('error', reject);
   });
+
+const parseJsonBody = (raw) => {
+  if (!raw) {
+    return {};
+  }
+  try {
+    return JSON.parse(raw);
+  } catch {
+    throw Object.assign(new Error('Invalid JSON body'), { statusCode: 400 });
+  }
+};
+
+const readJson = (request) => readRawBody(request).then(parseJsonBody);
 
 const sendJson = (response, statusCode, payload) => {
   response.writeHead(statusCode, {
@@ -1488,6 +1492,8 @@ const handlers = {
   ...adminAuth.handlers,
   // Subscription plans: public GET, admin-only create/update/delete. See subscriptionPlans.js.
   ...subscriptionPlans.handlers,
+  // Razorpay subscriptions (create / my / cancel) + signed webhook. See subscriptions.js.
+  ...subscriptions.handlers,
 
   // Friendly GET info handlers for browser testing
   'GET /api/meon/digi-url': async () => ({
@@ -2000,7 +2006,7 @@ const server = http.createServer(async (request, response) => {
     await fetchRazorpayCapturedPayments();
 
     let matchedPayment = null;
-    if (paymentId) {
+    if (paymentId && RAZORPAY_KEY_ID && RAZORPAY_KEY_SECRET) {
       try {
         const authHeader = 'Basic ' + Buffer.from(`${RAZORPAY_KEY_ID}:${RAZORPAY_KEY_SECRET}`).toString('base64');
         const res = await fetch(`https://api.razorpay.com/v1/payments/${paymentId}`, {
@@ -2111,8 +2117,10 @@ const server = http.createServer(async (request, response) => {
   }
 
   try {
-    const body = request.method === 'GET' ? {} : await readJson(request);
-    const context = { headers: request.headers, method: request.method, pathname, params: route.params };
+    // Raw body is kept for webhook signature verification (Razorpay signs the exact bytes).
+    const rawBody = request.method === 'GET' ? '' : await readRawBody(request);
+    const body = parseJsonBody(rawBody);
+    const context = { headers: request.headers, method: request.method, pathname, params: route.params, rawBody };
     const data = await handler(body, context);
     sendJson(response, 200, data);
   } catch (error) {
@@ -2144,5 +2152,15 @@ server.listen(PORT, HOST, () => {
     MSG91_READY: msg91Client.isConfigured() ? 'YES' : 'NO',
     JWT_SECRET_READY: authTokens.isConfigured() ? 'YES' : 'NO (set JWT_SECRET, 32+ chars)',
     ADMIN_LOGIN_READY: adminAuth.isConfigured() ? 'YES' : `NO (${adminAuth.configProblem()})`,
+    RAZORPAY_SUBSCRIPTIONS_READY: razorpayClient.isConfigured() ? 'YES' : 'NO (set RAZORPAY_KEY_ID and RAZORPAY_KEY_SECRET)',
+    RAZORPAY_WEBHOOK_READY: razorpayClient.isWebhookConfigured() ? 'YES' : 'NO (set RAZORPAY_WEBHOOK_SECRET)',
+    RAZORPAY_PLAN_MAPPING: (() => {
+      try {
+        const missing = subscriptions.unmappedPlanIds();
+        return missing.length === 0 ? 'YES' : `NO (missing: ${missing.map((id) => razorpayClient.planIdEnvName(id)).join(', ')})`;
+      } catch (error) {
+        return `UNKNOWN (${error.message})`;
+      }
+    })(),
   });
 });

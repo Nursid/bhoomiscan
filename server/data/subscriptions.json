@@ -1,0 +1,25 @@
+{
+  "subscriptions": [
+    {
+      "id": "sub_ThM9WBXLb2INB8",
+      "userId": "+917081002501",
+      "planId": "monthly",
+      "planName": "Monthly",
+      "razorpayPlanId": "plan_Th7AuxNxl38Qu7",
+      "amount": 1,
+      "currency": "INR",
+      "interval": "monthly",
+      "status": "created",
+      "currentPeriodStart": null,
+      "currentPeriodEnd": null,
+      "nextChargeAt": null,
+      "cancelAtPeriodEnd": false,
+      "cancelledAt": null,
+      "lastEventAt": null,
+      "lastPaymentId": null,
+      "createdAt": "2026-09-28T06:22:31.308Z",
+      "updatedAt": "2026-09-28T06:22:31.308Z"
+    }
+  ],
+  "processedEvents": {}
+}
